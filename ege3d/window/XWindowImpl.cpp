@@ -66,8 +66,8 @@ WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, Window
                                    sx,
                                    sy,
                                    1,
-                                   settings.getForegroundColor(),
-                                   settings.getBackgroundColor());
+                                   settings.getForegroundColor().toIntWithoutAlpha(),
+                                   settings.getBackgroundColor().toIntWithoutAlpha());
 
     // set title
     if(XSetStandardProperties(m_display, m_window, title.c_str(), title.c_str(), None, nullptr, 0, nullptr) < 0)
@@ -92,13 +92,13 @@ WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, Window
     // setup graphics context
     m_gc = XCreateGC(m_display, m_window, 0, nullptr);
 
-    if(XSetForeground(m_display, m_gc, settings.getForegroundColor()) < 0)
+    if(XSetForeground(m_display, m_gc, settings.getForegroundColor().toIntWithoutAlpha()) < 0)
     {
         std::cerr << "XSetForeground failed" << std::endl;
         return 0;
     }
 
-    if(XSetBackground(m_display, m_gc, settings.getBackgroundColor()) < 0)
+    if(XSetBackground(m_display, m_gc, settings.getBackgroundColor().toIntWithoutAlpha()) < 0)
     {
         std::cerr << "XSetBackground failed" << std::endl;
         return 0;

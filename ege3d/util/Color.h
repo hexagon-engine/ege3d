@@ -24,23 +24,41 @@
 
 #pragma once
 
-#include <ege3d/util/Color.h>
+#include <stdint.h>
 
 namespace EGE3d
 {
 
-class WindowSettings
+class Color
 {
 public:
-    WindowSettings& setBackgroundColor(Color color) { m_backgroundColor = color; return *this; }
-    Color getBackgroundColor() { return m_backgroundColor; }
+    Color(uint8_t _r, uint8_t _g, uint8_t _b, uint8_t _a = 255)
+    : r(_r), g(_g), b(_b), a(_a) {}
 
-    WindowSettings& setForegroundColor(Color color) { m_foregroundColor = color; return *this; }
-    Color getForegroundColor() { return m_foregroundColor; }
+    explicit Color(uint32_t _int = 0)
+    {
+        a = _int % 256;
+        _int /= 256;
+        b = _int % 256;
+        _int /= 256;
+        g = _int % 256;
+        _int /= 256;
+        r = _int % 256;
+    }
 
-private:
-    Color m_backgroundColor = {0, 0, 0};
-    Color m_foregroundColor = {255, 255, 255};
+    // TODO: Color from hex, hsv
+
+    uint32_t toInt()
+    {
+        return a + (b << 8) + (g << 16) + (r << 24);
+    }
+
+    uint32_t toIntWithoutAlpha()
+    {
+        return b + (g << 8) + (r << 16);
+    }
+
+    uint8_t r = 0, g = 0, b = 0, a = 255;
 };
 
 }

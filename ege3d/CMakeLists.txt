@@ -2,6 +2,8 @@ set(SOURCES
   # Util
   "util/Assertions.cpp"
   "util/Assertions.h"
+  "util/Color.cpp"
+  "util/Color.h"
 
   # Window
   "window/Window.cpp"
