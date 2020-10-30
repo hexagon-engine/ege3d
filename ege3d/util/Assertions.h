@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <stdlib.h>
+
 extern "C"
 [[noreturn]] void _ege3d_assertion_failed(const char* expr, const char* file, unsigned line);
 
