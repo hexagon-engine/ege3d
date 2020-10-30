@@ -1,0 +1,13 @@
+language: cpp
+os: linux
+dist: bionic
+compiler:
+- gcc
+before_install:
+- sudo apt update
+- sudo apt install g++ make cmake git libx11-dev mesa-common-dev libgl1-mesa-dev libglu1-mesa-dev libglew-dev
+script:
+- mkdir build
+- cd build
+- cmake -B . -S ..
+- make install -j2

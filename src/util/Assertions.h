@@ -25,9 +25,9 @@
 #pragma once
 
 extern "C"
-[[noreturn]] void _ege_assertion_failed(const char* expr, const char* file, unsigned line);
+[[noreturn]] void _ege3d_assertion_failed(const char* expr, const char* file, unsigned line);
 
 #define ASSERT(expr) \
-    if(!(expr)) _ege_assertion_failed(#expr, __FILE__, __LINE__)
+    if(!(expr)) _ege3d_assertion_failed(#expr, __FILE__, __LINE__)
 
 #define CRASH() ASSERT(false)
