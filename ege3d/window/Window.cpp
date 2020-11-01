@@ -66,14 +66,20 @@ void Window::close()
     }
 }
 
-void Window::dispatchEvents()
+bool Window::dispatchEvent(bool wait)
 {
-    m_impl->dispatchEvents();
+    return m_impl->dispatchEvent(wait);
 }
 
 bool Window::isOpen()
 {
     return m_systemHandle != 0;
+}
+
+void Window::dispatchAllEvents(bool wait)
+{
+    while(m_impl->dispatchEvent(wait))
+        ;
 }
 
 }

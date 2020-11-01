@@ -41,9 +41,13 @@ public:
 
     virtual WindowHandle create(size_t sx, size_t sy, std::string title, WindowSettings settings) override;
     virtual void close() override;
-    virtual void dispatchEvents() override;
+    virtual bool dispatchEvent(bool wait) override;
 
 private:
+    virtual void handleEvent(XEvent& event);
+    Atom getAtom(std::string name);
+    Atom getOrCreateAtom(std::string name);
+
     Display* m_display = nullptr;
     int m_screen = -1;
     ::Window m_window;

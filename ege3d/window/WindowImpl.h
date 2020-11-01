@@ -51,7 +51,7 @@ public:
 
     virtual WindowHandle create(size_t, size_t, std::string, WindowSettings) { CRASH(); }
     virtual void close() { CRASH(); }
-    virtual void dispatchEvents() { CRASH(); }
+    virtual bool dispatchEvent(bool) { CRASH(); }
 
     static std::unique_ptr<WindowImpl> make(Window* window);
 

@@ -9,7 +9,9 @@ int main()
                   .setForegroundColor({0, 255, 0}));
 
     while(window.isOpen())
-        window.dispatchEvents();
+    {
+        window.dispatchAllEvents();
+    }
 
     window.close();
     return 0;

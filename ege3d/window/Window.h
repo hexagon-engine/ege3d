@@ -43,8 +43,10 @@ public:
     bool create(size_t sx, size_t sy, std::string title, WindowSettings settings = {});
     void close();
     WindowHandle getSystemHandle();
-    void dispatchEvents();
+    bool dispatchEvent(bool wait = false);
+
     bool isOpen();
+    void dispatchAllEvents(bool wait = false);
 
 private:
     std::unique_ptr<Internal::WindowImpl> m_impl;

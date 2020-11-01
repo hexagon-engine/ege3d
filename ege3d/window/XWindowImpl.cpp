@@ -51,14 +51,15 @@ WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, Window
         std::cerr << "DISPLAY environment variable not set!" << std::endl;
         return 0;
     }
+
     m_display = XOpenDisplay(displayName);
     if(!m_display)
     {
         std::cerr << "Failed to open display!" << std::endl;
         return 0;
     }
-    m_screen = DefaultScreen(m_display);
 
+    m_screen = DefaultScreen(m_display);
     m_window = XCreateSimpleWindow(m_display,
                                    RootWindow(m_display, m_screen),
                                    0,
@@ -70,40 +71,30 @@ WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, Window
                                    settings.getBackgroundColor().toIntWithoutAlpha());
 
     // set title
-    if(XSetStandardProperties(m_display, m_window, title.c_str(), title.c_str(), None, nullptr, 0, nullptr) < 0)
-    {
-        std::cerr << "XSetStandardProperties failed" << std::endl;
-        return 0;
-    }
+    XSetStandardProperties(m_display, m_window, title.c_str(), title.c_str(), None, nullptr, 0, nullptr);
+
+    static const unsigned long eventMask = FocusChangeMask      | ButtonPressMask     |
+                                           ButtonReleaseMask    | ButtonMotionMask    |
+                                           PointerMotionMask    | KeyPressMask        |
+                                           KeyReleaseMask       | StructureNotifyMask |
+                                           EnterWindowMask      | LeaveWindowMask     |
+                                           VisibilityChangeMask | PropertyChangeMask  |
+                                           ExposureMask;
 
     // enable input
-    if(XSelectInput(m_display, m_window, ExposureMask | ButtonPressMask | KeyPressMask) < 0)
-    {
-        std::cerr << "XSelectInput failed" << std::endl;
-        return 0;
-    }
-
-    if(XMapWindow(m_display, m_window) < 0)
-    {
-        std::cerr << "XMapWindow failed" << std::endl;
-        return 0;
-    }
+    XSelectInput(m_display, m_window, eventMask);
+    XMapWindow(m_display, m_window);
 
     // setup graphics context
     m_gc = XCreateGC(m_display, m_window, 0, nullptr);
+    XSetForeground(m_display, m_gc, settings.getForegroundColor().toIntWithoutAlpha());
+    XSetBackground(m_display, m_gc, settings.getBackgroundColor().toIntWithoutAlpha());
 
-    if(XSetForeground(m_display, m_gc, settings.getForegroundColor().toIntWithoutAlpha()) < 0)
-    {
-        std::cerr << "XSetForeground failed" << std::endl;
-        return 0;
-    }
+    // enable ClientMessage on close
+    Atom wmDelete = getOrCreateAtom("WM_DELETE_WINDOW");
+    XSetWMProtocols(m_display, m_window, &wmDelete, 1);
 
-    if(XSetBackground(m_display, m_gc, settings.getBackgroundColor().toIntWithoutAlpha()) < 0)
-    {
-        std::cerr << "XSetBackground failed" << std::endl;
-        return 0;
-    }
-
+    XFlush(m_display);
     return m_window;
 }
 
@@ -113,25 +104,75 @@ void XWindowImpl::close()
     XFreeGC(m_display, m_gc);
     XDestroyWindow(m_display, m_window);
     XCloseDisplay(m_display);
+    XFlush(m_display);
 }
 
-void XWindowImpl::dispatchEvents()
+bool XWindowImpl::dispatchEvent(bool wait)
 {
     ASSERT(m_owner->isOpen());
     XEvent event;
-    do
-    {
-        XNextEvent(m_display, &event);
-        switch(event.type)
-        {
-        case Expose:
-            m_needRedraw = true;
-            break;
-        }
-    } while(XPending(m_display));
 
-    if(m_needRedraw)
-        std::cout << "need redraw" << std::endl;
+    if(wait)
+    {
+        if(XNextEvent(m_display, &event) < 0)
+            return false;
+        handleEvent(event);
+        return true;
+    }
+    else
+    {
+        bool eventOccurred = false;
+        while(XCheckIfEvent(m_display, &event, [](Display*, XEvent* event, XPointer ptr)->int {
+            return event->xany.window == (::Window)ptr;
+        }, (XPointer)m_window))
+        {
+            eventOccurred = true;
+            handleEvent(event);
+        }
+        return eventOccurred;
+    }
+}
+
+void XWindowImpl::handleEvent(XEvent& event)
+{
+    //std::cout << "Event: " << event.type << std::endl;
+    switch(event.type)
+    {
+    case Expose:
+        m_needRedraw = true;
+        std::cout << "onExpose" << std::endl;
+        break;
+    case ClientMessage:
+        {
+            std::cout << "ClientMessage" << std::endl;
+            // SFML
+            static Atom wmProtocols = getAtom("WM_PROTOCOLS");
+            if(event.xclient.message_type == wmProtocols)
+            {
+                static Atom wmDeleteWindow = getAtom("WM_DELETE_WINDOW");
+                if(event.xclient.format == 32 && event.xclient.data.l[0] == (long)wmDeleteWindow)
+                {
+                    std::cout << "onClose" << std::endl;
+                }
+            }
+        }
+        break;
+    case DestroyNotify:
+        std::cout << "onDestroy" << std::endl;
+        break;
+    default:
+        std::cout << "Invalid event type " << event.type << std::endl;
+    }
+}
+
+Atom XWindowImpl::getAtom(std::string name)
+{
+    return XInternAtom(m_display, name.c_str(), False);
+}
+
+Atom XWindowImpl::getOrCreateAtom(std::string name)
+{
+    return XInternAtom(m_display, name.c_str(), True);
 }
 
 } // Internal
