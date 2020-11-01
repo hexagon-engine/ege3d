@@ -144,7 +144,6 @@ void XWindowImpl::handleEvent(XEvent& event)
         break;
     case ClientMessage:
         {
-            std::cout << "ClientMessage" << std::endl;
             // SFML
             static Atom wmProtocols = getAtom("WM_PROTOCOLS");
             if(event.xclient.message_type == wmProtocols)
@@ -155,11 +154,54 @@ void XWindowImpl::handleEvent(XEvent& event)
                     std::cout << "onClose" << std::endl;
                 }
             }
-        }
-        break;
+        } break;
     case DestroyNotify:
         std::cout << "onDestroy" << std::endl;
         break;
+    case MotionNotify:
+        {
+            int x = event.xmotion.x;
+            int y = event.xmotion.y;
+            std::cout << "onMouseMove [" << x << "," << y << "]" << std::endl;
+        } break;
+    case ButtonPress:
+        {
+            int button = event.xbutton.button;
+            if(button == 4) // wheel up
+            {
+                std::cout << "onMouseWheel d=" << 1 << std::endl;
+            }
+            else if(button == 5) // wheel down
+            {
+                std::cout << "onMouseWheel d=" << -1 << std::endl;
+            }
+            else
+            {
+                std::cout << "onMouseButtonPress b=" << button << std::endl;
+            }
+        } break;
+    case ButtonRelease:
+        {
+            int button = event.xbutton.button;
+            if(button == 4 || button == 5) // wheel up/down
+            {
+                // ignore
+            }
+            else
+            {
+                std::cout << "onMouseButtonRelease b=" << button << std::endl;
+            }
+        } break;
+    case KeyPress:
+        {
+            int key = event.xkey.keycode;
+            std::cout << "onKeyPress k=" << key << std::endl;
+        } break;
+    case KeyRelease:
+        {
+            int key = event.xkey.keycode;
+            std::cout << "onKeyRelease k=" << key << std::endl;
+        } break;
     default:
         std::cout << "Invalid event type " << event.type << std::endl;
     }
