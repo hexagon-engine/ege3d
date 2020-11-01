@@ -46,5 +46,5 @@ endif()
 target_include_directories(ege3d PUBLIC ${CMAKE_SOURCE_DIR})
 
 install(TARGETS "ege3d" ARCHIVE DESTINATION lib)
-install(TARGETS "ege3d" PUBLIC_HEADER DESTINATION include)
+# install(TARGETS "ege3d" PUBLIC_HEADER DESTINATION include)
 
