@@ -32,15 +32,21 @@ namespace EGE3d
 class WindowSettings
 {
 public:
-    WindowSettings& setBackgroundColor(Color color) { m_backgroundColor = color; return *this; }
-    Color getBackgroundColor() { return m_backgroundColor; }
+    enum Renderer
+    {
+        NoRenderer, // Render directly (using system-specific functions).
+        OpenGL,     // Use OpenGL API.
+        DirectX,    // Use DirectX API.
 
-    WindowSettings& setForegroundColor(Color color) { m_foregroundColor = color; return *this; }
-    Color getForegroundColor() { return m_foregroundColor; }
+        // keep last
+        __Count
+    };
+
+    WindowSettings& setRenderer(Renderer renderer) { m_renderer = renderer; return* this; }
+    Renderer getRenderer() { return m_renderer; }
 
 private:
-    Color m_backgroundColor = {0, 0, 0};
-    Color m_foregroundColor = {255, 255, 255};
+    Renderer m_renderer = Renderer::OpenGL;
 };
 
 }

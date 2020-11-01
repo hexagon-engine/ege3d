@@ -47,6 +47,7 @@ public:
     void close();
     WindowHandle getSystemHandle();
     bool dispatchEvent(bool wait = false);
+    void display();
 
     bool isOpen();
     void dispatchAllEvents(bool wait = false);

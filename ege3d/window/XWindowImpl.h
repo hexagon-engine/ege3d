@@ -25,6 +25,7 @@
 #pragma once
 
 #include <ege3d/window/WindowImpl.h>
+#include <GL/glx.h>
 #include <X11/Xlib.h>
 
 namespace EGE3d
@@ -42,6 +43,7 @@ public:
     virtual WindowHandle create(size_t sx, size_t sy, std::string title, WindowSettings settings) override;
     virtual void close() override;
     virtual bool dispatchEvent(bool wait) override;
+    virtual void display() override;
 
 private:
     virtual void handleEvent(XEvent& event);
@@ -52,7 +54,9 @@ private:
     int m_screen = -1;
     ::Window m_window;
     GC m_gc;
+    GLXContext m_glxContext;
     bool m_needRedraw = false;
+    WindowSettings m_settings;
 };
 
 }

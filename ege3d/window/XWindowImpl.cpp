@@ -27,6 +27,8 @@
 #include <ege3d/window/Keyboard.h>
 #include <ege3d/window/Mouse.h>
 #include <ege3d/window/Window.h>
+
+#include <GL/glx.h>
 #include <iomanip>
 #include <iostream>
 #include <unistd.h>
@@ -181,6 +183,8 @@ std::unique_ptr<WindowImpl> WindowImpl::make(Window* window)
 // XWindowImpl
 WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, WindowSettings settings)
 {
+    m_settings = settings;
+
     char* displayName = getenv("DISPLAY");
     if(!displayName)
     {
@@ -195,20 +199,51 @@ WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, Window
         return 0;
     }
 
+    // get default screen
+    // TODO: allow user to select screen
     m_screen = DefaultScreen(m_display);
-    m_window = XCreateSimpleWindow(m_display,
-                                   RootWindow(m_display, m_screen),
-                                   0,
-                                   0,
-                                   sx,
-                                   sy,
-                                   1,
-                                   settings.getForegroundColor().toIntWithoutAlpha(),
-                                   settings.getBackgroundColor().toIntWithoutAlpha());
 
-    // set title
-    XSetStandardProperties(m_display, m_window, title.c_str(), title.c_str(), None, nullptr, 0, nullptr);
+    // setup visual
+    XVisualInfo* visualInfo;
+    Visual* visual;
+    int depth;
+    switch(settings.getRenderer())
+    {
+    case WindowSettings::Renderer::DirectX:
+        {
+            std::cout << "DirectX not supported!" << std::endl;
+            return 0;
+        } break;
+    case WindowSettings::Renderer::NoRenderer:
+        {
+            visual = DefaultVisual(m_display, m_screen);
+            depth = DefaultDepth(m_display, m_screen);
+        } break;
+    case WindowSettings::Renderer::OpenGL:
+        {
+            // get best visual
+            int attribs[] = {GLX_RGBA, GLX_DEPTH_SIZE, 16, GLX_DOUBLEBUFFER, None};
+            visualInfo = glXChooseVisual(m_display, m_screen, attribs);
+            if(!visualInfo)
+            {
+                std::cout << "Failed to find visual with specified attributes!" << std::endl;
+                return 0;
+            }
+            visual = visualInfo->visual;
+            depth = visualInfo->depth;
 
+            // create GLX context
+            m_glxContext = glXCreateContext(m_display, visualInfo, None, true);
+            if(!m_glxContext)
+            {
+                std::cout << "Failed to create context!" << std::endl;
+                return 0;
+            }
+        } break;
+    default: CRASH();
+    }
+
+    // define event mask
     static const unsigned long eventMask = FocusChangeMask      | ButtonPressMask     |
                                            ButtonReleaseMask    | ButtonMotionMask    |
                                            PointerMotionMask    | KeyPressMask        |
@@ -216,6 +251,35 @@ WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, Window
                                            EnterWindowMask      | LeaveWindowMask     |
                                            VisibilityChangeMask | PropertyChangeMask  |
                                            ExposureMask;
+    // define attributes
+    XSetWindowAttributes attributes;
+    attributes.colormap = XCreateColormap(m_display, RootWindow(m_display, m_screen), visual, AllocNone);
+    attributes.event_mask = eventMask;
+    attributes.override_redirect = False;
+
+    // actually create window
+    m_window = XCreateWindow(
+                             m_display,
+                             DefaultRootWindow(m_display),
+                             0,
+                             0,
+                             sx,
+                             sy,
+                             0,
+                             depth,
+                             InputOutput,
+                             visual,
+                             CWEventMask | CWOverrideRedirect | CWColormap,
+                             &attributes);
+
+    if(!m_window)
+    {
+        std::cout << "Failed to create window!" << std::endl;
+        return 0;
+    }
+
+    // set title
+    XSetStandardProperties(m_display, m_window, title.c_str(), title.c_str(), None, nullptr, 0, nullptr);
 
     // enable input
     XSelectInput(m_display, m_window, eventMask);
@@ -223,23 +287,43 @@ WindowHandle XWindowImpl::create(size_t sx, size_t sy, std::string title, Window
 
     // setup graphics context
     m_gc = XCreateGC(m_display, m_window, 0, nullptr);
-    XSetForeground(m_display, m_gc, settings.getForegroundColor().toIntWithoutAlpha());
-    XSetBackground(m_display, m_gc, settings.getBackgroundColor().toIntWithoutAlpha());
 
     // enable ClientMessage on close
     Atom wmDelete = getOrCreateAtom("WM_DELETE_WINDOW");
     XSetWMProtocols(m_display, m_window, &wmDelete, 1);
-
     XFlush(m_display);
+
+    // if OpenGL, set GLX context to window :)
+    if(settings.getRenderer() == WindowSettings::Renderer::OpenGL)
+    {
+        glXMakeCurrent(m_display, m_window, m_glxContext);
+    }
+
     return m_window;
 }
 
 void XWindowImpl::close()
 {
     std::cout << "TODO: XWindowImpl::close()" << std::endl;
+
+    if(m_settings.getRenderer() == WindowSettings::Renderer::OpenGL)
+    {
+        //glXMakeCurrent(m_display, m_window, 0);
+        glXDestroyContext(m_display, m_glxContext);
+        m_glxContext = 0;
+    }
+
     XFreeGC(m_display, m_gc);
     XDestroyWindow(m_display, m_window);
     XCloseDisplay(m_display);
+}
+
+void XWindowImpl::display()
+{
+    if(m_glxContext)
+    {
+        glXSwapBuffers(m_display, m_window);
+    }
 }
 
 bool XWindowImpl::dispatchEvent(bool wait)

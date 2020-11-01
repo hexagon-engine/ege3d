@@ -67,6 +67,11 @@ void Window::close()
     }
 }
 
+void Window::display()
+{
+    m_impl->display();
+}
+
 bool Window::dispatchEvent(bool wait)
 {
     return m_impl->dispatchEvent(wait);
