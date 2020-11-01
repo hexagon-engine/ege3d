@@ -79,13 +79,15 @@ bool Window::isOpen()
 
 void Window::dispatchAllEvents(bool wait)
 {
-    while(m_impl->dispatchEvent(wait))
+    while(isOpen() && m_impl->dispatchEvent(wait))
         ;
 }
 
 void Window::onEvent(const SystemEvent& event)
 {
     std::cout << "event :)" << std::endl;
+    if(m_eventHandler)
+        m_eventHandler(event);
 }
 
 }

@@ -27,6 +27,8 @@
 #include <ege3d/window/SystemEvent.h>
 #include <ege3d/window/WindowImpl.h>
 #include <ege3d/window/WindowSettings.h>
+
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -49,12 +51,15 @@ public:
     bool isOpen();
     void dispatchAllEvents(bool wait = false);
 
-    void onEvent(const SystemEvent& event);
+    void setEventHandler(std::function<void(const SystemEvent&)> handler) { m_eventHandler = handler; }
+
+    virtual void onEvent(const SystemEvent& event);
 
 private:
-
     std::unique_ptr<Internal::WindowImpl> m_impl;
     WindowHandle m_systemHandle = 0;
+
+    std::function<void(const SystemEvent&)> m_eventHandler;
 };
 
 }

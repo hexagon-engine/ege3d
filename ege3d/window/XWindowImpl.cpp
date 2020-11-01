@@ -240,7 +240,6 @@ void XWindowImpl::close()
     XFreeGC(m_display, m_gc);
     XDestroyWindow(m_display, m_window);
     XCloseDisplay(m_display);
-    XFlush(m_display);
 }
 
 bool XWindowImpl::dispatchEvent(bool wait)
@@ -264,6 +263,8 @@ bool XWindowImpl::dispatchEvent(bool wait)
         {
             eventOccurred = true;
             handleEvent(event);
+            if(!m_owner->isOpen())
+                break;
         }
         return eventOccurred;
     }

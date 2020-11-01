@@ -59,6 +59,7 @@ public:
     : m_type(type), m_window(window) {}
 
     Window& getWindow() const { return m_window; }
+    EventType getType() const { return m_type; }
 
 private:
     EventType m_type;
