@@ -25,6 +25,7 @@
 #include "Window.h"
 
 #include <ege3d/window/WindowImpl.h>
+#include <iostream>
 
 namespace EGE3d
 {
@@ -80,6 +81,11 @@ void Window::dispatchAllEvents(bool wait)
 {
     while(m_impl->dispatchEvent(wait))
         ;
+}
+
+void Window::onEvent(const SystemEvent& event)
+{
+    std::cout << "event :)" << std::endl;
 }
 
 }

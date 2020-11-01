@@ -24,37 +24,25 @@
 
 #pragma once
 
-#include <ege3d/window/SystemEvent.h>
-#include <ege3d/window/WindowImpl.h>
-#include <ege3d/window/WindowSettings.h>
-#include <memory>
-#include <string>
-
-#define EGE3D_WINDOW_DEFAULT 0
-
 namespace EGE3d
 {
 
-class Window
+namespace Mouse
 {
-public:
-    Window();
-    virtual ~Window();
 
-    bool create(size_t sx, size_t sy, std::string title, WindowSettings settings = {});
-    void close();
-    WindowHandle getSystemHandle();
-    bool dispatchEvent(bool wait = false);
+enum class Button
+{
+    Invalid,
+    Left,
+    Middle,
+    Right,
+    X1,
+    X2,
 
-    bool isOpen();
-    void dispatchAllEvents(bool wait = false);
-
-    void onEvent(const SystemEvent& event);
-
-private:
-
-    std::unique_ptr<Internal::WindowImpl> m_impl;
-    WindowHandle m_systemHandle = 0;
+    // keep last
+    __Count
 };
+
+}
 
 }

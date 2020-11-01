@@ -26,7 +26,5 @@
 
 namespace EGE3d
 {
-
-
-
+    // currently nothing
 }

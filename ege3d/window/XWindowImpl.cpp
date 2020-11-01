@@ -25,6 +25,7 @@
 #include "XWindowImpl.h"
 
 #include <ege3d/window/Keyboard.h>
+#include <ege3d/window/Mouse.h>
 #include <ege3d/window/Window.h>
 #include <iomanip>
 #include <iostream>
@@ -38,7 +39,7 @@ namespace EGE3d
 namespace Internal
 {
 
-Keyboard::Key xToEGE(KeySym xkey)
+Keyboard::Key xKeyToEGE(KeySym xkey)
 {
     switch(xkey)
     {
@@ -157,6 +158,20 @@ Keyboard::Key xToEGE(KeySym xkey)
     }
 }
 
+Mouse::Button xButtonToEGE(int button)
+{
+    switch(button)
+    {
+    case Button1: return Mouse::Button::Left;
+    case Button2: return Mouse::Button::Middle;
+    case Button3: return Mouse::Button::Right;
+    case 8: return Mouse::Button::X1;
+    case 9: return Mouse::Button::X2;
+    default:
+        return Mouse::Button::Invalid;
+    }
+}
+
 std::unique_ptr<WindowImpl> WindowImpl::make(Window* window)
 {
     ASSERT(window);
@@ -256,12 +271,12 @@ bool XWindowImpl::dispatchEvent(bool wait)
 
 void XWindowImpl::handleEvent(XEvent& event)
 {
-    //std::cout << "Event: " << event.type << std::endl;
     switch(event.type)
     {
     case Expose:
         m_needRedraw = true;
-        std::cout << "onExpose" << std::endl;
+        //std::cout << "onExpose" << std::endl;
+        m_owner->onEvent(SystemEvent(EventType::EExpose, *m_owner));
         break;
     case ClientMessage:
         {
@@ -272,66 +287,76 @@ void XWindowImpl::handleEvent(XEvent& event)
                 static Atom wmDeleteWindow = getAtom("WM_DELETE_WINDOW");
                 if(event.xclient.format == 32 && event.xclient.data.l[0] == (long)wmDeleteWindow)
                 {
-                    std::cout << "onClose" << std::endl;
+                    //std::cout << "onClose" << std::endl;
+                    m_owner->onEvent(SystemEvent(EventType::EClose, *m_owner));
                 }
             }
         } break;
     case DestroyNotify:
-        std::cout << "onDestroy" << std::endl;
+        //std::cout << "onDestroy" << std::endl;
+        m_owner->onEvent(SystemEvent(EventType::EDestroy, *m_owner));
+        // TODO: do cleanup
         break;
     case MotionNotify:
         {
             int x = event.xmotion.x;
             int y = event.xmotion.y;
-            std::cout << "onMouseMove x=" << x << " y=" << y << std::endl;
+            //std::cout << "onMouseMove x=" << x << " y=" << y << std::endl;
+            m_owner->onEvent(MouseMoveEvent(EventType::EMouseMove, *m_owner, x, y));
         } break;
     case ButtonPress:
         {
             int button = event.xbutton.button;
+            // TODO: horizontal mouse wheel
             if(button == 4) // wheel up
             {
-                std::cout << "onMouseWheel d=" << 1 << std::endl;
+                //std::cout << "onMouseWheel d=" << 1 << std::endl;
+                m_owner->onEvent(MouseWheelEvent(EventType::EMouseWheel, *m_owner, 1));
             }
             else if(button == 5) // wheel down
             {
-                std::cout << "onMouseWheel d=" << -1 << std::endl;
+                //std::cout << "onMouseWheel d=" << -1 << std::endl;
+                m_owner->onEvent(MouseWheelEvent(EventType::EMouseWheel, *m_owner, -1));
             }
             else
             {
-                std::cout << "onMouseButtonPress b=" << button << std::endl;
+                Mouse::Button egeButton = xButtonToEGE(button);
+                //std::cout << "onMouseButtonPress b=" << (int)egeButton << std::endl;
+                m_owner->onEvent(MouseButtonEvent(EventType::EMouseButtonPress, *m_owner, egeButton));
             }
         } break;
     case ButtonRelease:
         {
             int button = event.xbutton.button;
-            if(button == 4 || button == 5) // wheel up/down
+            if(button >= 4 && button <= 7) // wheel
             {
                 // ignore
             }
             else
             {
-                std::cout << "onMouseButtonRelease b=" << button << std::endl;
+                Mouse::Button egeButton = xButtonToEGE(button);
+                //std::cout << "onMouseButtonRelease b=" << (int)egeButton << std::endl;
+                m_owner->onEvent(MouseButtonEvent(EventType::EMouseButtonRelease, *m_owner, egeButton));
             }
         } break;
     case KeyPress:
         {
-            int key = event.xkey.keycode;
             bool alt = event.xkey.state & Mod1Mask;
-            bool control = event.xkey.state & ControlMask;
             bool shift = event.xkey.state & ShiftMask;
+            bool control = event.xkey.state & ControlMask;
             bool super = event.xkey.state & Mod4Mask;
 
             // SFML
             Keyboard::Key egeKey;
             for(size_t s = 0; s < 4; s++)
             {
-                egeKey = xToEGE(XLookupKeysym(&event.xkey, s));
+                egeKey = xKeyToEGE(XLookupKeysym(&event.xkey, s));
                 if(egeKey != Keyboard::Key::Invalid)
                     break;
             }
-            std::cout << "onKeyPress k=" << (int)egeKey << " a=" << alt << " c=" << control << " s=" << shift << " u=" << super << std::endl;
+            //std::cout << "onKeyPress k=" << (int)egeKey << " a=" << alt << " s=" << shift << "c=" << control << " u=" << super << std::endl;
+            m_owner->onEvent(KeyEvent(EventType::EKeyPress, *m_owner, egeKey, alt, shift, control, super));
 
-            // SFML
             if(!XFilterEvent(&event, None))
             {
                 static XComposeStatus status;
@@ -340,31 +365,33 @@ void XWindowImpl::handleEvent(XEvent& event)
                 char keyBuffer[16];
                 if(XLookupString(&event.xkey, keyBuffer, sizeof(keyBuffer), nullptr, &status))
                 {
-                    std::cout << "onTextEnter " << "str='" << keyBuffer[0] << "'" << std::endl;
+                    //std::cout << "onTextEnter " << "str='" << keyBuffer[0] << "'" << std::endl;
+                    m_owner->onEvent(TextEvent(EventType::ETextEnter, *m_owner, keyBuffer[0]));
                 }
             }
         } break;
     case KeyRelease:
         {
-            KeySym key = event.xkey.keycode;
             bool alt = event.xkey.state & Mod1Mask;
-            bool control = event.xkey.state & ControlMask;
             bool shift = event.xkey.state & ShiftMask;
+            bool control = event.xkey.state & ControlMask;
             bool super = event.xkey.state & Mod4Mask;
 
             // SFML
             Keyboard::Key egeKey;
             for(size_t s = 0; s < 4; s++)
             {
-                egeKey = xToEGE(XLookupKeysym(&event.xkey, s));
+                egeKey = xKeyToEGE(XLookupKeysym(&event.xkey, s));
                 if(egeKey != Keyboard::Key::Invalid)
                     break;
             }
 
-            std::cout << "onKeyRelease k=" << (int)egeKey << " a=" << alt << " c=" << control << " s=" << shift << " u=" << super << std::endl;
+            //std::cout << "onKeyRelease k=" << (int)egeKey << " a=" << alt << " c=" << control << " s=" << shift << " u=" << super << std::endl;
+            m_owner->onEvent(KeyEvent(EventType::EKeyRelease, *m_owner, egeKey, alt, shift, control, super));
         } break;
     default:
         std::cout << "Invalid event type " << event.type << std::endl;
+        m_owner->onEvent(SystemEvent(EventType::EInvalid, *m_owner));
     }
 }
 

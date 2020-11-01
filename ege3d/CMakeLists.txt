@@ -8,6 +8,10 @@ set(SOURCES
   # Window
   "window/Keyboard.cpp"
   "window/Keyboard.h"
+  "window/Mouse.cpp"
+  "window/Mouse.h"
+  "window/SystemEvent.cpp"
+  "window/SystemEvent.h"
   "window/Window.cpp"
   "window/Window.h"
   "window/WindowImpl.cpp"
