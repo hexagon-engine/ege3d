@@ -6,6 +6,8 @@ set(SOURCES
   "util/Color.h"
 
   # Window
+  "window/Keyboard.cpp"
+  "window/Keyboard.h"
   "window/Window.cpp"
   "window/Window.h"
   "window/WindowImpl.cpp"
